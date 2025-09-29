@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="ru">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Plants vs Brainrots - Stock Tracker</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+	<style>
+		:root{
+			--bg:#0f1724;
+			--card:#071428;
+			--muted:#9aa4b2;
+			--accent:#2dd4bf;
+			--danger:#ff6b6b;
+			--glass: rgba(255,255,255,0.03);
+		}
+		html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+		body{background:linear-gradient(180deg,#041021 0%,#071428 60%);color:#e6eef6;}
+		.container{max-width:1100px;margin:36px auto;padding:24px}
+		.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+		.title{display:flex;gap:16px;align-items:center}
+		.logo{width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#22c1c3,#5b87ff);display:flex;align-items:center;justify-content:center;font-weight:800;color:#07202a}
+		h1{font-size:20px;margin:0}
+		.subtitle{color:var(--muted);font-size:13px}
+		.controls{display:flex;gap:8px;align-items:center}
+		.button{background:var(--accent);color:#022021;padding:8px 12px;border-radius:8px;border:0;font-weight:600;cursor:pointer}
+		.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+		.card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:16px;border-radius:14px;box-shadow:0 10px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.04);display:flex;flex-direction:column;gap:10px;transition:transform .18s ease,box-shadow .18s ease}
+		.card:hover{transform:translateY(-6px);box-shadow:0 20px 40px rgba(2,6,23,0.7)}
+		.card .row{display:flex;justify-content:space-between;align-items:center}
+		.item-name{font-weight:700}
+		.item-type{font-size:12px;color:var(--muted)}
+		.price{background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:8px;font-weight:700}
+		.badge{padding:6px 8px;border-radius:999px;font-size:12px}
+		.in-stock{background:linear-gradient(90deg,#10b981,#059669);color:white}
+		.out-stock{background:linear-gradient(90deg,#ef4444,#dc2626);color:white}
+		.small{font-size:12px;color:var(--muted)}
+		.icon{font-size:28px;margin-right:8px}
+		.card-head{display:flex;align-items:center;gap:12px}
+		.rarity{padding:6px 10px;border-radius:999px;color:#041428;font-weight:700}
+		.rarity-secret{background:#ffd166}
+		.rarity-godly{background:#ff7ab6}
+		.rarity-mythic{background:#9b5cff}
+		.rarity-legendary{background:#ffb86b}
+		.rarity-epic{background:#7be4d0}
+		.rarity-rare{background:#f6a6a6}
+		.rarity-common{background:#cbd5e1}
+		.footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+		.empty{padding:40px;border-radius:12px;background:var(--glass);text-align:center;color:var(--muted)}
+		@media (max-width:920px){.container{padding:18px}.logo{width:48px;height:48px}}
+		@media (max-width:520px){.container{padding:12px}.logo{width:44px;height:44px}}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="header">
+			<div class="title">
+				<div class="logo">PB</div>
+				<div>
+					<h1>Plants vs Brainrots — Stock Tracker</h1>
+					<div class="subtitle">Live stocks from community tracker</div>
+				</div>
+			</div>
+			<div class="controls">
+				<button id="refreshBtn" class="button">Обновить</button>
+				<div id="countdown" class="small">—</div>
+			</div>
+		</div>
+
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
+            <div style="flex:1;display:flex;gap:8px;align-items:center">
+                <label style="display:flex;align-items:center;gap:8px;color:var(--muted)"><input id="notifyToggle" type="checkbox"> Enable Notifications</label>
+                <input id="trackInput" placeholder="Enter item name to track..." style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+                <button id="addTrackBtn" class="button">+ Add Item</button>
+            </div>
+        </div>
+
+        <div id="trackedList" style="margin-bottom:12px"></div>
+
+        <div style="display:flex;gap:20px;flex-direction:column">
+            <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <div style="font-weight:800">Seeds <span id="seedsCount" style="color:var(--muted);font-weight:600;margin-left:8px">—</span></div>
+                    <div class="small">Секция семян</div>
+                </div>
+                <div id="seedsGrid" class="grid"></div>
+                <div id="seedsEmpty" class="empty" style="display:none">Семян не найдено</div>
+            </div>
+
+            <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <div style="font-weight:800">Gear <span id="gearCount" style="color:var(--muted);font-weight:600;margin-left:8px">—</span></div>
+                    <div class="small">Секция снаряжения</div>
+                </div>
+                <div id="gearGrid" class="grid"></div>
+                <div id="gearEmpty" class="empty" style="display:none">Gear не найдено</div>
+            </div>
+        </div>
+
+        <div class="footer"></div>
+	</div>
+
+	<script>
+// Use local proxy by default (run `node server.js`). Falls back to upstream URL.
+const API_URL = window.LOCAL_API_URL || '/api/stock'
+	// Price mapping copied from provided app.js logic
+	function getPriceFromName(name){
+		const nameLower = (name||'').toLowerCase();
+		const pricingMap = {
+			'tomatrio seed':125000000,'mr carrot seed':50000000,'carnivorous plant seed':25000000,'cocotank seed':5000000,'watermelon seed':1000000,'eggplant seed':250000,'dragon fruit seed':100000,'sunflower seed':25000,'pumpkin seed':5000,'strawberry seed':1250,'cactus seed':200
+		}
+		if(pricingMap[nameLower]) return pricingMap[nameLower]
+		if (nameLower.includes('water bucket')) return 7500;
+		if (nameLower.includes('frost grenade')) return 12500;
+		if (nameLower.includes('banana gun')) return 25000;
+		if (nameLower.includes('frost blower')) return 125000;
+		if (nameLower.includes('carrot launcher')) return 500000;
+		// Seed fallbacks
+		if (nameLower.includes('pumpkin')) return 5000;
+		if (nameLower.includes('eggplant')) return 3000;
+		if (nameLower.includes('sunflower')) return 1000;
+		if (nameLower.includes('strawberry')) return 1500;
+		if (nameLower.includes('cactus')) return 200;
+		return 500; // default
+	}
+	function getRarityFromName(name){
+		const nameLower = (name||'').toLowerCase();
+		const map = {
+			'tomatrio seed':'secret','mr carrot seed':'secret','carnivorous plant seed':'godly','cocotank seed':'godly','watermelon seed':'mythic','eggplant seed':'rare','dragon fruit seed':'rare','sunflower seed':'epic','pumpkin seed':'epic','strawberry seed':'rare','cactus seed':'rare'
+		}
+		if(map[nameLower]) return map[nameLower]
+		if (nameLower.includes('carrot launcher')) return 'godly';
+		if (nameLower.includes('frost blower')) return 'legendary';
+		if (nameLower.includes('banana gun')) return 'epic';
+		if (nameLower.includes('frost grenade')) return 'epic';
+		if (nameLower.includes('water bucket')) return 'epic';
+		if (nameLower.includes('pumpkin')) return 'epic';
+		if (nameLower.includes('eggplant')) return 'rare';
+		if (nameLower.includes('sunflower')) return 'epic';
+		if (nameLower.includes('strawberry')) return 'rare';
+		if (nameLower.includes('cactus')) return 'rare';
+		return 'common';
+	}
+
+	function isProbablySeed(name){
+		const n = (name||'').toLowerCase()
+		// explicit keywords for common seeds
+		const seedKeywords = ['sunflower','pumpkin','strawberry','cactus','tomatrio','mr carrot','carrot','eggplant','dragon fruit','watermelon']
+		if(n.includes('seed')) return true
+		if(seedKeywords.some(k=> n.includes(k))) return true
+		return false
+	}
+
+	function formatPrice(price){
+		if(price >= 1000000) return (price/1000000).toFixed(0) + 'm'
+		if(price >= 100000) return (price/1000).toFixed(0) + 'k'
+		return price.toLocaleString()
+	}
+
+	function createCard(item){
+		const price = getPriceFromName(item.name)
+		const rarity = getRarityFromName(item.name)
+		const inStock = (typeof item.available === 'boolean' ? item.available : (item.stock>0))
+		const card = document.createElement('div')
+		card.className = 'card'
+		card.innerHTML = `
+			<div class="card-head">
+				<div class="icon">🌱</div>
+				<div style="flex:1">
+					<div class="item-name">${item.name}</div>
+					<div class="item-type">${item.category||item.type||'item'}</div>
+				</div>
+				<div style="display:flex;flex-direction:column;align-items:flex-end">
+					<div class="price">$${formatPrice(price)}</div>
+					<div class="small" style="margin-top:6px">x${item.stock ?? (item.currentStock ?? 0)}</div>
+				</div>
+			</div>
+			<div style="display:flex;justify-content:space-between;align-items:center">
+			<div style="display:flex;gap:8px;align-items:center">
+				<div class="badge ${inStock? 'in-stock':'out-stock'}">${inStock ? `${item.stock ?? (item.currentStock ?? 0)}x In stock` : 'Out'}</div>
+			</div>
+				<div class="rarity rarity-${rarity}">${rarity.charAt(0).toUpperCase()+rarity.slice(1)}</div>
+			</div>
+			<div class="small">Updated: ${item.lastUpdated ? new Date(item.lastUpdated).toLocaleString() : '—'}</div>
+		`
+		return card
+	}
+
+	async function fetchAndRender(){
+    const seedsGrid = document.getElementById('seedsGrid')
+    const gearGrid = document.getElementById('gearGrid')
+    const seedsEmpty = document.getElementById('seedsEmpty')
+    const gearEmpty = document.getElementById('gearEmpty')
+    const seedsCount = document.getElementById('seedsCount')
+    const gearCount = document.getElementById('gearCount')
+    seedsGrid.innerHTML = ''
+    gearGrid.innerHTML = ''
+		try{
+            const res = await fetch(API_URL,{cache:'no-cache'})
+            if(!res.ok) throw new Error('Network')
+            let data = await res.json()
+            // Normalized proxy returns { seeds: [], gear: [] }
+            if(data && (data.seeds || data.gear)){
+                // Keep seeds and gear separate for rendering - but correct misclassifications
+                let seeds = Array.isArray(data.seeds) ? data.seeds.map(i=> ({...i, category:'seed'})) : []
+                let gear = Array.isArray(data.gear) ? data.gear.map(i=> ({...i, category:'gear'})) : []
+
+                // Move items from gear -> seeds if they look like seeds
+                const stillGear = []
+                for(const g of gear){
+                    if(isProbablySeed(g.name)) seeds.push({...g, category:'seed'})
+                    else stillGear.push(g)
+                }
+                gear = stillGear
+                // no search — show all (but keep counts)
+                seeds.forEach(item=> seedsGrid.appendChild(createCard(item)))
+                gear.forEach(item=> gearGrid.appendChild(createCard(item)))
+
+                seedsEmpty.style.display = seeds.length? 'none' : 'block'
+                gearEmpty.style.display = gear.length? 'none' : 'block'
+                seedsCount.textContent = seeds.length
+                gearCount.textContent = gear.length
+                // update tracked items
+                updateTrackedStatus({ seeds, gear })
+                return
+            } else if(!Array.isArray(data)){
+                // some APIs wrap in { data: [...] }
+                if(data.data && Array.isArray(data.data)) data = data.data
+            }
+
+            // fallback: we have a flat array - separate by category/type
+            const q = ''
+            const seedsArr = []
+            const gearArr = []
+            data.forEach(it=>{
+                const cat = (it.category||it.type||'').toLowerCase()
+                const name = it.name || it.item || ''
+                const obj = {...it, name}
+                if(cat.includes('seed') || name.toLowerCase().includes('seed')) seedsArr.push(obj)
+                else gearArr.push(obj)
+            })
+
+            const seedsFiltered = q ? seedsArr.filter(x=> x.name.toLowerCase().includes(q)) : seedsArr
+            const gearFiltered = q ? gearArr.filter(x=> x.name.toLowerCase().includes(q)) : gearArr
+
+            seedsFiltered.forEach(item=> seedsGrid.appendChild(createCard(item)))
+            gearFiltered.forEach(item=> gearGrid.appendChild(createCard(item)))
+
+            seedsEmpty.style.display = seedsFiltered.length? 'none' : 'block'
+            gearEmpty.style.display = gearFiltered.length? 'none' : 'block'
+            seedsCount.textContent = seedsArr.length
+            gearCount.textContent = gearArr.length
+
+            // Update tracked items status
+            updateTrackedStatus(data)
+        }catch(e){
+            console.error(e)
+            // show error in both sections
+            try{ seedsEmpty.style.display='block'; gearEmpty.style.display='block'; seedsEmpty.textContent = 'Ошибка загрузки данных'; gearEmpty.textContent = 'Ошибка загрузки данных' }catch(_){ }
+        }
+	}
+
+	// Countdown simple
+	let seconds = 300; const countdownEl = document.getElementById('countdown');
+	function tick(){
+		seconds--;
+		if(seconds<=0){ seconds=300; fetchAndRender(); }
+		const m = Math.floor(seconds/60); const s = seconds%60; countdownEl.textContent = `${m}:${s.toString().padStart(2,'0')}`
+		countdownEl.style.color = seconds<=60 ? 'var(--danger)' : ''
+	}
+
+	document.getElementById('refreshBtn').addEventListener('click', ()=>{ fetchAndRender(); seconds=300 })
+
+	// Initial load
+	fetchAndRender()
+	setInterval(tick,1000)
+
+// --- Tracking & Notifications logic (persisted in localStorage) ---
+const TRACK_KEY = 'pvbr_tracked_v1'
+const NOTIFY_KEY = 'pvbr_notify_enabled_v1'
+const LAST_KEY = 'pvbr_last_known_v1'
+	let tracked = []
+let notifyEnabled = false
+let lastKnown = {}
+	function loadTracked(){
+		try{ tracked = JSON.parse(localStorage.getItem(TRACK_KEY)) || [] }catch(e){ tracked = [] }
+    try{ notifyEnabled = JSON.parse(localStorage.getItem(NOTIFY_KEY)) || false }catch(e){ notifyEnabled = false }
+    try{ lastKnown = JSON.parse(localStorage.getItem(LAST_KEY)) || {} }catch(e){ lastKnown = {} }
+    const tgl = document.getElementById('notifyToggle')
+    if(tgl) tgl.checked = !!notifyEnabled
+    renderTracked()
+	}
+	function saveTracked(){ localStorage.setItem(TRACK_KEY, JSON.stringify(tracked)) }
+	function renderTracked(){
+		const el = document.getElementById('trackedList')
+		el.innerHTML = ''
+		for(const t of tracked){
+			const pill = document.createElement('span')
+			pill.style.display='inline-flex'
+			pill.style.alignItems='center'
+			pill.style.gap='8px'
+			pill.style.padding='8px 12px'
+			pill.style.borderRadius='999px'
+			pill.style.background='linear-gradient(90deg,#f59e0b,#ef4444)'
+			pill.style.color='#041428'
+			pill.style.marginRight='8px'
+			pill.innerHTML = `🔔 ${t}`
+
+		// insert status placeholder (will be updated by updateTrackedStatus)
+		const statusPlaceholder = document.createElement('span')
+		statusPlaceholder.className = 'track-status'
+		statusPlaceholder.style.marginLeft = '8px'
+		pill.insertBefore(statusPlaceholder, pill.firstChild)
+			const x = document.createElement('button')
+			x.textContent='✖'
+			x.style.marginLeft='8px'
+			x.style.background='transparent'
+			x.style.border='0'
+			x.style.cursor='pointer'
+			x.addEventListener('click', ()=>{ tracked = tracked.filter(i=> i !== t); saveTracked(); renderTracked(); })
+			pill.appendChild(x)
+			el.appendChild(pill)
+		}
+	}
+
+	document.getElementById('addTrackBtn').addEventListener('click', ()=>{
+		const v = document.getElementById('trackInput').value.trim()
+		if(!v) return
+		if(!tracked.includes(v)) tracked.push(v)
+		document.getElementById('trackInput').value=''
+		saveTracked()
+		renderTracked()
+	})
+
+// Notification toggle handling
+document.getElementById('notifyToggle').addEventListener('change', async (e)=>{
+    notifyEnabled = !!e.target.checked
+    localStorage.setItem(NOTIFY_KEY, JSON.stringify(notifyEnabled))
+    if(notifyEnabled && ('Notification' in window)){
+        if(Notification.permission === 'default'){
+            try{ const p = await Notification.requestPermission(); if(p !== 'granted'){ notifyEnabled = false; document.getElementById('notifyToggle').checked = false; localStorage.setItem(NOTIFY_KEY, JSON.stringify(false)) } }
+            catch(_){ notifyEnabled = false; document.getElementById('notifyToggle').checked = false; localStorage.setItem(NOTIFY_KEY, JSON.stringify(false)) }
+        } else if(Notification.permission === 'denied'){
+            // can't enable notifications if denied
+            notifyEnabled = false
+            document.getElementById('notifyToggle').checked = false
+            localStorage.setItem(NOTIFY_KEY, JSON.stringify(false))
+            alert('Уведомления блокируются в настройках браузера. Разрешите уведомления для этого сайта.')
+        }
+    }
+})
+
+	function updateTrackedStatus(allData){
+		// allData might be normalized {seeds,gear} or flat array
+		let arr = []
+		if(allData && (allData.seeds || allData.gear)){
+			if(Array.isArray(allData.seeds)) arr.push(...allData.seeds)
+			if(Array.isArray(allData.gear)) arr.push(...allData.gear)
+		} else if(Array.isArray(allData)) arr = allData
+		const container = document.getElementById('trackedList')
+        for(const child of Array.from(container.children)){
+            const name = child.textContent.replace('🔔','').replace('✖','').trim()
+            const found = arr.find(x=> x.name.toLowerCase() === name.toLowerCase())
+            // status element (created in renderTracked)
+            let status = child.querySelector('.track-status')
+            if(!status){ status = document.createElement('span'); status.className='track-status'; status.style.marginLeft='8px'; child.insertBefore(status, child.firstChild) }
+            if(found){
+                status.textContent = found.available ? `In stock (${found.stock})` : `Out`
+                status.style.color = found.available ? '#10b981' : '#ef4444'
+
+                // check last known and send notification when became available
+                const key = name.toLowerCase()
+                const prev = lastKnown[key]
+                if(notifyEnabled && Notification && Notification.permission === 'granted'){
+                    if(found.available && (!prev || prev.available === false)){
+                        try{
+                            new Notification(`${found.name} is in stock`, { body: `${found.stock}x available`, silent: false })
+                        }catch(_){ }
+                    }
+                }
+                // update lastKnown
+                lastKnown[key] = { available: !!found.available, stock: found.stock }
+            } else {
+                status.textContent = 'Not found'
+                status.style.color = 'var(--muted)'
+                lastKnown[name.toLowerCase()] = { available: false, stock: 0 }
+            }
+        }
+        try{ localStorage.setItem(LAST_KEY, JSON.stringify(lastKnown)) }catch(e){}
+	}
+
+	loadTracked()
+	</script>
+</body>
+</html>
